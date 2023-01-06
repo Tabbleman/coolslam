@@ -25,7 +25,56 @@ void Map::InsertKeyFrame(Frame::Ptr frame){
 }
 
 void Map::InsertMapPoint(MapPoint::Ptr map_point){
+    if(landmarks_.find(map_point->id_) == landmarks_.end()){
+        landmarks_.insert(std::make_pair(map_point->id_, map_point));
+        activate_landmarks_.insert(std::make_pair(map_point->id_, map_point));
 
+    }
+    else {
+        landmarks_[map_point->id_] = map_point;
+        activate_keyframes_[map_point->id_] = map_point;
+    }
+
+}
+
+void Map::RemoveOldKeyframe(){
+    if(current_frame_ == nullptr) return ;
+    
+    double mindis       = 1<<20 , maxdis    = 0;
+    double min_kf_id    = 0     , max_kf_id = 0;
+    auto Twc = current_frame_->Pose().inverse();
+    
+    for(auto &kf: keyframes_){
+        if(kf.second == current_frame_)continue;
+        auto dis = (kf.second->Pose() * Twc).log().norm();
+        if(dis > maxdis){
+            maxdis = dis;
+            max_kf_id = kf.first;
+        }
+        if(dis < mindis){
+            mindis = dis;
+            min_kf_id = kf.first;
+        }
+    }
+    const double min_dis_th = 0.2;
+    Frame::Ptr frame_to_remove = nullptr;
+    if(mindis < min_dis_th){
+        frame_to_remove = keyframes_.at(min_kf_id);
+
+    }
+    else {
+        frame_to_remove = keyframes_.at(max_kf_id);
+    }
+    LOG(INFO) << "remove keyframe " << frame_to_remove->keyframe_id_;
+    
+    activate_keyframes_.erase(frame_to_remove->keyframe_id_);
+    for(auto feature: frame_to_remove->features){
+        auto mp = feature->map_point_.lock();
+        if(mp){
+            mp->RemoveObservation(feature);
+        }
+    }
+    CleanMap();
 
 }
 

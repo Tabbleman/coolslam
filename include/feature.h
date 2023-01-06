@@ -23,8 +23,10 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     typedef std::shared_ptr<Feature> Ptr;   //frame that hold this feature
+    
     std::weak_ptr<Frame> frame_;            //associate mappoint
     cv::KeyPoint position_;                 //2d extract position
+    std::weak_ptr<MapPoint> map_point_;
     bool is_outer_ = false;                 //weather this keypoint was abnormal
 
 public:
